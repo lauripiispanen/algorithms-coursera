@@ -64,17 +64,6 @@ fn is_negative(_num: &str) -> bool {
     return _num.chars().next() == Some('-');
 }
 
-fn read_from_end_and_pad<'a>(_str: &'a str, up_to: usize) -> Box<std::iter::Iterator<Item = u32>> {
-    return Box::new(_str
-                .chars()
-                .collect::<Vec<_>>()
-                .into_iter()
-                .rev()
-                .filter_map(|x| x.to_digit(10))
-                .chain(std::iter::repeat(0))
-                .take(up_to))
-}
-
 pub fn add(_first: &str, _second: &str) -> String {
     let negative_first = is_negative(_first);
     let negative_second = is_negative(_second);
@@ -86,12 +75,21 @@ pub fn add(_first: &str, _second: &str) -> String {
             max_len -= 1;
         }
 
-        let v1 = read_from_end_and_pad(_first, max_len);
-        let v2 = read_from_end_and_pad(_second, max_len);
+        let v1 = _first.chars()
+                        .rev()
+                        .filter_map(|x| x.to_digit(10))
+                        .chain(std::iter::repeat(0))
+                        .take(max_len);
+
+        let v2 = _second.chars()
+                        .rev()
+                        .filter_map(|x| x.to_digit(10))
+                        .chain(std::iter::repeat(0))
+                        .take(max_len);
 
         let mut chain = v1.zip(v2).map(|(x, y)| x + y);
 
-        let mut ret = String::from("");
+        let mut ret = Vec::<char>::with_capacity(max_len);
         let mut carry = false;
         while let Some(x) = chain.next() {
             let real_x = if carry {
@@ -102,24 +100,31 @@ pub fn add(_first: &str, _second: &str) -> String {
 
             if real_x >= 10 {
                 carry = true;
-                ret.insert_str(0, &(real_x - 10).to_string());
+                ret.push(std::char::from_digit(real_x - 10, 10).unwrap());
             } else {
                 carry = false;
-                ret.insert_str(0, &real_x.to_string());
+                ret.push(std::char::from_digit(real_x, 10).unwrap());
             }
         }
         if carry {
-            ret.insert_str(0, "1");
+            ret.push('1');
         }
-        ret = String::from(ret.trim_start_matches("0"));
-        if ret.len() == 0 {
+        let mut past_zeros = false;
+        let mut r = ret.into_iter().rev().filter(|x| {
+            if !past_zeros && x != &'0' {
+                past_zeros = true;
+            }
+            return past_zeros;
+        }).collect::<String>();
+
+        if r.len() == 0 {
             return String::from("0");
         }
 
         if negative_first {
-            ret.insert_str(0, "-");
+            r.insert_str(0, "-");
         }
-        return ret;
+        return r;
 
     } else {
         // different sign, take abs from both values, subtract, then plop in sign of higher number
@@ -143,11 +148,19 @@ pub fn add(_first: &str, _second: &str) -> String {
             (_second_abs, _first_abs)
         };
 
-        let v1 = read_from_end_and_pad(_f, max_len);
-        let v2 = read_from_end_and_pad(_s, max_len);
+        let v1 = _f.chars()
+                    .rev()
+                    .filter_map(|x| x.to_digit(10))
+                    .chain(std::iter::repeat(0))
+                    .take(max_len);
+        let v2 = _s.chars()
+                    .rev()
+                    .filter_map(|x| x.to_digit(10))
+                    .chain(std::iter::repeat(0))
+                    .take(max_len);
         
         let mut chain = v1.zip(v2);
-        let mut ret = String::from("");
+        let mut ret = Vec::<char>::with_capacity(max_len);
         let mut carry = false;
         while let Some((x, y)) = chain.next() {
             let mut real_y = y;
@@ -156,20 +169,26 @@ pub fn add(_first: &str, _second: &str) -> String {
             }
             if real_y > x {
                 carry = true;
-                ret.insert_str(0, &((10 + x) - real_y).to_string());
+                ret.push(std::char::from_digit((10 + x) - real_y, 10).unwrap());
             } else {
-                ret.insert_str(0, &(x - real_y).to_string());
+                ret.push(std::char::from_digit(x - real_y, 10).unwrap());
                 carry = false;
             }
         }
 
-        ret = String::from(ret.trim_start_matches("0"));
+        let mut past_zeros = false;
+        let mut r = ret.into_iter().rev().filter(|x| {
+            if !past_zeros && x != &'0' {
+                past_zeros = true;
+            }
+            return past_zeros;
+        }).collect::<String>();
 
         if _f == _first_abs && negative_first ||
            _f == _second_abs && negative_second {
-            ret.insert_str(0, "-");
+            r.insert_str(0, "-");
         }
-        return ret;
+        return r;
     }
 }
 
@@ -179,16 +198,20 @@ pub fn subtract(_first: &str, _second: &str) -> String {
     if negative_second {
         return add(_first, &_second[1.._second.len()]);
     } else {
-        return add(_first, &format!("-{}", _second));
+        let mut _s = String::with_capacity(1 + _second.len());
+        _s.push('-');
+        _s.push_str(_second);
+        return add(_first, &_s);
     }
 }
 
 pub fn pow_10(_num: &str, _pow: usize) -> String {
-    let mut s = String::from(_num);
+    let mut _s = String::with_capacity(1 + _pow);
+    _s.push_str(_num);
     for _ in 0.._pow {
-        s.push_str("0");
+        _s.push('0');
     }
-    return s;
+    return _s;
 }
 
 #[cfg(test)]

@@ -1,0 +1,9 @@
+[package]
+name = "week0101"
+version = "0.1.0"
+authors = ["Lauri Piispanen <lauri.piispanen@reaktor.com>"]
+edition = "2018"
+
+[dependencies]
+
+

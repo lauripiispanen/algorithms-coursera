@@ -51,9 +51,9 @@ pub fn max<'a>(_first: &'a str, _second: &'a str) -> &'a str {
 }
 
 pub fn multiply(_first: &str, _second: &str) -> String {
-    let _first_num = _first.parse::<u32>().unwrap();
-    let _second_num = _second.parse::<u32>().unwrap();
-    let mut ret = 0;
+    let _first_num = _first.parse::<u128>().unwrap();
+    let _second_num = _second.parse::<u128>().unwrap();
+    let mut ret:u128 = 0;
     for _ in 0.._first_num {
         ret += _second_num;
     }
@@ -218,12 +218,12 @@ pub fn pow_10(_num: &str, _pow: usize) -> String {
 mod tests {
 
     #[test]
-    fn test_pow_10() {
+    fn test_stringmath_pow_10() {
         assert_eq!(super::pow_10("2", 2), "200");
     }
 
     #[test]
-    fn test_add() {
+    fn test_stringmath_add() {
         assert_eq!(super::add("2", "3"), "5");
         assert_eq!(super::add("17", "18"), "35");
         assert_eq!(super::add("22", "3"), "25");
@@ -243,7 +243,7 @@ mod tests {
     }
     
     #[test]
-    fn test_max() {
+    fn test_stringmath_max() {
         assert_eq!(super::max("2", "-3"), "2");
         assert_eq!(super::max("-2", "3"), "3");
         assert_eq!(super::max("2", "7"), "7");
@@ -252,13 +252,13 @@ mod tests {
     }
     
     #[test]
-    fn test_multiply() {
+    fn test_stringmath_multiply() {
         assert_eq!(super::multiply("0", "45"), "0");
         assert_eq!(super::multiply("0000", "45"), "0");
     }
 
     #[test]
-    fn test_subtract() {
+    fn test_stringmath_subtract() {
         assert_eq!(super::subtract("5", "3"), "2");
         assert_eq!(super::subtract("25", "3"), "22");
         assert_eq!(super::subtract("1245", "1243"), "2");

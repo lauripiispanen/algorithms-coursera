@@ -13,15 +13,12 @@ fn main() {
 }
 
 fn karatsuba_multiply(_first: &str, _second: &str) -> String {
-    if _first.len() == 1 || _second.len() == 1 {
-        if _first.len() < _second.len() {
-            return stringmath::multiply(_first, _second);
-        } else {
-            return stringmath::multiply(_second, _first);
-        }
+    let max_len = std::u64::MAX.to_string().len() - 1;
+    if _first.len() < max_len && _second.len() < max_len {
+        return (_first.parse::<u128>().unwrap() * _second.parse::<u128>().unwrap()).to_string();
     } else {
         let len = std::cmp::min(_first.len(), _second.len());
-        let _pow = len - 1;
+        let _pow = len / 2;
 
         let (first_1, first_2) = _first.split_at(_first.len() - _pow);
         let (second_1, second_2) = _second.split_at(_second.len() - _pow);;

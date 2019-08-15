@@ -5,21 +5,22 @@ fn main() {
     println!("Hello, world!");
 }
 
-struct MinHeap<T: Ord> {
+struct BinHeap<T: Ord> {
+    ordering: Ordering,
     values: VecDeque<T>
 }
 
-impl<T: Ord> MinHeap<T> {
+impl<T: Ord> BinHeap<T> {
     fn insert(&mut self, t: T) {
         self.values.push_back(t);
         let mut i = self.values.len() - 1;
         while i > 0 {
             let b_i = i;
             let b = &self.values[b_i];
-            let a_i = MinHeap::<T>::parent_of(i);
+            let a_i = BinHeap::<T>::parent_of(i);
             let a = &self.values[a_i];
 
-            if a.cmp(b) == Ordering::Greater {
+            if b.cmp(a) == self.ordering {
                 self.values.swap(a_i, b_i);
             }
             i = a_i;
@@ -30,9 +31,17 @@ impl<T: Ord> MinHeap<T> {
         (i - 1) / 2
     }
 
-    fn new() -> MinHeap<T> {
-        MinHeap {
-            values: VecDeque::new()
+    fn new_minheap() -> BinHeap<T> {
+        BinHeap {
+            values: VecDeque::new(),
+            ordering: Ordering::Less
+        }
+    }
+
+    fn new_maxheap() -> BinHeap<T> {
+        BinHeap {
+            values: VecDeque::new(),
+            ordering: Ordering::Greater
         }
     }
 
@@ -41,11 +50,11 @@ impl<T: Ord> MinHeap<T> {
         let right_i = from_i * 2 + 2;
         let mut smallest_i = from_i;
 
-        if left_i < self.values.len() && self.values[left_i] < self.values[smallest_i] {
+        if left_i < self.values.len() && self.values[left_i].cmp(&self.values[smallest_i]) == self.ordering {
             smallest_i = left_i;
         }
 
-        if right_i < self.values.len() && self.values[right_i] < self.values[smallest_i] {
+        if right_i < self.values.len() && self.values[right_i].cmp(&self.values[smallest_i]) == self.ordering {
             smallest_i = right_i;
         }
 
@@ -79,7 +88,7 @@ mod tests {
 
     #[test]
     fn test_insert() {
-        let mut h = super::MinHeap::new();
+        let mut h = super::BinHeap::new_minheap();
         h.insert(3);
         h.insert(1);
         h.insert(7);
@@ -91,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_extract() {
-        let mut h = super::MinHeap::new();
+        let mut h = super::BinHeap::new_minheap();
         h.insert(3);
         h.insert(1);
         h.insert(7);
@@ -104,6 +113,23 @@ mod tests {
             v.push(h.extract().unwrap());
         }
         assert_eq!(v, &[-3,1,2,3,7])
+    }
+
+    #[test]
+    fn test_maxheap() {
+        let mut h = super::BinHeap::new_maxheap();
+        h.insert(3);
+        h.insert(1);
+        h.insert(7);
+        h.insert(2);
+        h.insert(-3);
+
+        let mut v = Vec::new();
+        while !h.is_empty() {
+            println!("{:?}", h.values);
+            v.push(h.extract().unwrap());
+        }
+        assert_eq!(v, &[7,3,2,1,-3])
     }
 
 }

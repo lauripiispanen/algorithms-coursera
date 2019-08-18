@@ -1,135 +1,122 @@
+use std::env;
+use std::fs::File;
+use std::path::Path;
+
+use std::io::BufReader;
+use std::io::BufRead;
+use std::collections::HashSet;
+
+use std::convert::TryInto;
 use std::cmp::Ordering;
-use std::collections::VecDeque;
+
+mod binheap;
+
+struct Edge {
+    from: usize,
+    to: usize,
+    length: u32
+}
+
+#[derive(Eq)]
+struct Node {
+    id: usize,
+    distance: u64
+}
+
+impl Ord for Node {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.distance.cmp(&other.distance)
+    }
+}
+
+impl PartialOrd for Node {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Node {
+    fn eq(&self, other: &Self) -> bool {
+        self == other
+    }
+}
 
 fn main() {
-    println!("Hello, world!");
-}
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 3 {
+        println!("ERROR: pass in the name of the file and target nodes (comma-separated) as argument.");
+        std::process::exit(1);
+    }
 
-struct BinHeap<T: Ord> {
-    ordering: Ordering,
-    values: VecDeque<T>
-}
+    let filename = &args[1];
 
-impl<T: Ord> BinHeap<T> {
-    fn insert(&mut self, t: T) {
-        self.values.push_back(t);
-        let mut i = self.values.len() - 1;
-        while i > 0 {
-            let b_i = i;
-            let b = &self.values[b_i];
-            let a_i = BinHeap::<T>::parent_of(i);
-            let a = &self.values[a_i];
+    if !Path::new(filename).is_file() {
+        println!("ERROR: File {} does not exist", filename);
+        std::process::exit(1);
+    }
 
-            if b.cmp(a) == self.ordering {
-                self.values.swap(a_i, b_i);
+    let target_nodes = &args[2].split(",").map(|n| n.parse::<usize>().unwrap());
+
+    let f = File::open(filename).unwrap();
+    let file = BufReader::new(&f);
+
+    let nodes:Vec<(usize, Vec<Edge>)>= file.lines()
+        .map(|r| r.unwrap())
+        .map(|r| r.split_whitespace().map(|s| s.to_string()).collect())
+        .map(|r:Vec<String>| {
+            let mut row_entries = r.into_iter(); 
+            let from = row_entries.next().unwrap().parse::<usize>().unwrap();
+
+            let siblings = row_entries.map(move |e:String| {
+                let v:Vec<&str> = e.split(",").take(2).collect();
+                if let [to, distance] = &v[..] {
+                    return Edge {
+                        from: from,
+                        to: to.parse::<usize>().unwrap(),
+                        length: distance.parse::<u32>().unwrap()
+                    };
+                } else {
+                    panic!("Unexpected file format!");
+                }
+            }).collect();
+
+            return (from, siblings);
+        }).collect();
+
+    println!("We have {} nodes", nodes.len());
+    let last_node = nodes.last().and_then(|(from, _)| (*from).try_into().ok()).unwrap();
+
+    let mut visited = HashSet::<usize>::new();
+    let mut distances = vec![1000000; last_node];
+    let mut current_node = 0;
+    distances[0] = 0;
+
+    let mut neighbors = binheap::BinHeap::<Node>::new_minheap();
+
+    while visited.len() < nodes.len() {
+        for n in &nodes[current_node].1 {
+            let node_id = n.to - 1;
+            if !visited.contains(&node_id) {
+                let dist = distances[current_node] + n.length as u64;
+                if dist < distances[node_id] {
+                    distances[node_id] = dist;
+                }
+                neighbors.insert(Node {
+                    id: node_id,
+                    distance: dist
+                });
             }
-            i = a_i;
-        }
+        };
+
+        let next = neighbors.extract().unwrap();
+        visited.insert(next.id);
+        current_node = next.id
     }
 
-    fn parent_of(i: usize) -> usize {
-        (i - 1) / 2
-    }
+    let target_distances = target_nodes.to_owned()
+                                       .map(|n| distances[n - 1].to_string())
+                                       .collect::<Vec<String>>()
+                                       .join(",");
 
-    fn new_minheap() -> BinHeap<T> {
-        BinHeap {
-            values: VecDeque::new(),
-            ordering: Ordering::Less
-        }
-    }
-
-    fn new_maxheap() -> BinHeap<T> {
-        BinHeap {
-            values: VecDeque::new(),
-            ordering: Ordering::Greater
-        }
-    }
-
-    fn min_heapify(&mut self, from_i: usize) -> usize {
-        let left_i = from_i * 2 + 1;
-        let right_i = from_i * 2 + 2;
-        let mut smallest_i = from_i;
-
-        if left_i < self.values.len() && self.values[left_i].cmp(&self.values[smallest_i]) == self.ordering {
-            smallest_i = left_i;
-        }
-
-        if right_i < self.values.len() && self.values[right_i].cmp(&self.values[smallest_i]) == self.ordering {
-            smallest_i = right_i;
-        }
-
-        if smallest_i != from_i {
-            self.values.swap(smallest_i, from_i);
-        }
-        return smallest_i;
-    }
-
-    fn extract(&mut self) -> Option<T> {
-        let v = self.values.pop_front();
-        let mut i = 0;
-        // workaround for lack of tail recursion
-        loop {
-            let new_i = self.min_heapify(i);
-            if new_i == i {
-                break;
-            }
-            i = new_i;
-        }
-        return v;
-    }
-
-    fn is_empty(&self) -> bool {
-        return self.values.is_empty();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn test_insert() {
-        let mut h = super::BinHeap::new_minheap();
-        h.insert(3);
-        h.insert(1);
-        h.insert(7);
-        h.insert(2);
-        h.insert(-3);
-
-        assert_eq!(h.values, &[-3,1,7,3,2])
-    }
-
-    #[test]
-    fn test_extract() {
-        let mut h = super::BinHeap::new_minheap();
-        h.insert(3);
-        h.insert(1);
-        h.insert(7);
-        h.insert(2);
-        h.insert(-3);
-
-        let mut v = Vec::new();
-        while !h.is_empty() {
-            println!("{:?}", h.values);
-            v.push(h.extract().unwrap());
-        }
-        assert_eq!(v, &[-3,1,2,3,7])
-    }
-
-    #[test]
-    fn test_maxheap() {
-        let mut h = super::BinHeap::new_maxheap();
-        h.insert(3);
-        h.insert(1);
-        h.insert(7);
-        h.insert(2);
-        h.insert(-3);
-
-        let mut v = Vec::new();
-        while !h.is_empty() {
-            println!("{:?}", h.values);
-            v.push(h.extract().unwrap());
-        }
-        assert_eq!(v, &[7,3,2,1,-3])
-    }
-
+    println!("Distance to nodes: {}", target_distances);
 }

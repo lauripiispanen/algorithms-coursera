@@ -61,26 +61,45 @@ impl<T: Ord> BinHeap<T> {
     }
 
     pub fn extract(&mut self) -> Option<T> {
-        let v = self.values.pop_front();
-        let mut i = 0;
-        // workaround for lack of tail recursion
-        loop {
-            let new_i = self.min_heapify(i);
-            if new_i == i {
-                break;
+        if (self.values.len() > 1) {
+            let v = self.values.pop_front();
+            let b = self.values.pop_back().unwrap();
+            self.values.push_front(b);
+            let mut i = 0;
+
+            // workaround for lack of tail recursion
+            loop {
+                let new_i = self.min_heapify(i);
+                if new_i == i {
+                    break;
+                }
+                i = new_i;
             }
-            i = new_i;
+            return v;
+        } else {
+            return self.values.pop_front();
         }
-        return v;
+    }
+
+    pub fn peek(&mut self) -> Option<&T> {
+        return self.values.front();
     }
 
     pub fn is_empty(&self) -> bool {
         return self.values.is_empty();
     }
+
+    pub fn len(&self) -> usize {
+        return self.values.len();
+    }
 }
 
 #[cfg(test)]
 mod tests {
+
+    extern crate rand;
+
+    use rand::{thread_rng, seq::SliceRandom};
 
     #[test]
     fn test_insert() {
@@ -104,8 +123,8 @@ mod tests {
         h.insert(-3);
 
         let mut v = Vec::new();
+        assert_eq!(-3, *h.peek().unwrap());
         while !h.is_empty() {
-            println!("{:?}", h.values);
             v.push(h.extract().unwrap());
         }
         assert_eq!(v, &[-3,1,2,3,7])
@@ -126,6 +145,22 @@ mod tests {
             v.push(h.extract().unwrap());
         }
         assert_eq!(v, &[7,3,2,1,-3])
+    }
+
+    #[test]
+    fn test_minheap_big() {
+        let mut h = super::BinHeap::new_minheap();
+        let mut nums: Vec<u32> = (1..=10000).collect();
+
+        nums.shuffle(&mut thread_rng());
+
+        for n in nums {
+            h.insert(n);
+        }
+
+        for n in 1..=10000 {
+            assert_eq!(n, h.extract().unwrap());
+        }
     }
 
 }

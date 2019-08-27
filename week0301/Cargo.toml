@@ -16,3 +16,7 @@ path = "src/scheduling/main.rs"
 [[bin]]
 name = "msp"
 path = "src/msp/main.rs"
+
+[lib]
+name = "common"
+path = "src/common/lib.rs"

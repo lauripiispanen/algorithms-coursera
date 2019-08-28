@@ -61,7 +61,7 @@ impl<T: Ord> BinHeap<T> {
     }
 
     pub fn extract(&mut self) -> Option<T> {
-        if (self.values.len() > 1) {
+        if self.values.len() > 1 {
             let v = self.values.pop_front();
             let b = self.values.pop_back().unwrap();
             self.values.push_front(b);

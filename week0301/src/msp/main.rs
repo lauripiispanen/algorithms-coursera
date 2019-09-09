@@ -60,6 +60,7 @@ fn main() {
     let input_file = matches.value_of("INPUT").unwrap();
 
     let nodes = read_numeric_lines::<i64>(input_file)
+                                    .skip(1)
                                     .map(Edge::from);
     
     let cost = calculate_msp_cost(nodes);

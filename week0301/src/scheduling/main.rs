@@ -14,6 +14,7 @@ fn main() {
     let input_file = matches.value_of("INPUT").unwrap();
 
     let jobs:Vec<(u64,u64)> = read_numeric_lines(input_file)
+                                    .skip(1)
                                     .map(|e| (e[0],e[1]))
                                     .collect();
 

@@ -9,7 +9,6 @@ where T: std::str::FromStr,
     let file = BufReader::new(f);
 
     return file.lines()
-                .skip(1)
                 .map(|x| {
                     return x.unwrap()
                             .split_whitespace()

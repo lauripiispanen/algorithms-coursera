@@ -94,6 +94,14 @@ impl<T: Ord> BinHeap<T> {
     }
 }
 
+impl <T:Ord>Iterator for BinHeap<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        return self.extract();
+    }
+}
+
 #[cfg(test)]
 mod tests {
 

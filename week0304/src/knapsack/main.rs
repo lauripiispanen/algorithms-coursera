@@ -1,8 +1,7 @@
 extern crate clap;
 use clap::{Arg, App};
 
-
-
+use std::collections::HashMap;
 
 use common::read_file::read_numeric_lines;
 
@@ -20,25 +19,34 @@ fn main() {
     let (knapsack_size, _):(u32, _) = i.next().unwrap();
 
     let input = i.collect::<Vec<(u32, u32)>>();
+    let mut cache = HashMap::<(usize, u32), u32>::new();
 
-    println!("{}", knapsack_value(&input, knapsack_size));
+    println!("{}", knapsack_value(&input, knapsack_size, &mut cache));
 }
 
 type Value = u32;
 type Weight = u32;
 
-fn knapsack_value(input:&[(Value, Weight)], knapsack_size: u32) -> u32 {
+fn knapsack_value(input:&[(Value, Weight)], knapsack_size: u32, cache: &mut HashMap<(usize, u32), u32>) -> u32 {
+    let cache_key = (input.len(), knapsack_size);
+    if cache.contains_key(&cache_key) {
+        return *(cache.get(&cache_key).unwrap());
+    }
     return match input.last() {
         None => 0,
         Some(last) => {
-            let a = knapsack_value(&input[0..input.len() - 1], knapsack_size);
+            let a = knapsack_value(&input[0..input.len() - 1], knapsack_size, cache);
             if last.1 > knapsack_size {
+                cache.insert(cache_key, a);
                 return a;
             }
-            let b = knapsack_value(&input[0..input.len() - 1], knapsack_size - last.1) + last.0;
+            let b = knapsack_value(&input[0..input.len() - 1], knapsack_size - last.1, cache) + last.0;
+
             if a > b {
+                cache.insert(cache_key, a);
                 return a;
             } else {
+                cache.insert(cache_key, b);
                 return b;
             }
         }
@@ -56,6 +64,6 @@ mod tests {
         v.push((4, 2));
         v.push((4, 3));
 
-        assert_eq!(8, super::knapsack_value(&v, 6))
+        assert_eq!(8, super::knapsack_value(&v, 6, &mut std::collections::HashMap::new()))
     }
 }

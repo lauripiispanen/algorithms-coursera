@@ -1,4 +1,7 @@
+#![feature(test)]
 mod read_file;
+
+extern crate test;
 
 extern crate clap;
 use clap::{Arg, App};
@@ -24,14 +27,17 @@ fn main() {
 
     let vertices:Vec<Vertex> = i.map(|v| (v[0], v[1])).collect();
 
+    held_karp(create_distance_matrix(vertices));
+}
+
+fn create_distance_matrix(vertices: Vec<Vertex>) -> Vec<Vec<f64>> {
     let mut distance_matrix:Vec<Vec<f64>> = vec![vec![0.0; vertices.len()]; vertices.len()];
     for x in 0..vertices.len() {
         for y in 0..vertices.len() {
             distance_matrix[x][y] = dist(vertices[x], vertices[y]);
         }
     }
-
-    held_karp(distance_matrix);
+    return distance_matrix;
 }
 
 type Vertex = (f64, f64);
@@ -90,4 +96,21 @@ fn held_karp(distances: Vec<Vec<f64>>) {
     tour_distances.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
 
     println!("{:?}", tour_distances.get(0));
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use test::Bencher;
+
+    #[bench]
+    fn bench_held_karp(b: &mut Bencher) {
+        b.iter(|| held_karp(create_distance_matrix(vec![
+            (3.433752748235324, 2.9215164273513206),
+            (0.266027289402357, 3.367553812393056),
+            (3.107592426409198, 3.091359997997841),
+            (1.2770174634306963, 1.4543288785259425)
+        ])));
+    }
 }

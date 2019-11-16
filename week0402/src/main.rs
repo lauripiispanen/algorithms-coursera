@@ -6,7 +6,6 @@ extern crate test;
 extern crate clap;
 use clap::{Arg, App};
 use std::collections::HashMap;
-use std::collections::BTreeSet;
 
 use itertools::Itertools;
 
@@ -58,11 +57,9 @@ fn held_karp(distances: Vec<Vec<f64>>) {
     //     - the node previous to the one we ended here
 
     #![allow(non_snake_case)]
-    let mut C:HashMap<(BTreeSet<usize>, usize), (f64, usize)> = HashMap::with_capacity(distances.len());
+    let mut C:HashMap<(u128, usize), (f64, usize)> = HashMap::with_capacity(distances.len());
     for i in 1..distances.len() {
-        let mut s = BTreeSet::new();
-        s.insert(i);
-        C.insert((s, i), (distances[0][i], 0));
+        C.insert((1 << (i - 1), i), (distances[0][i], 0));
     }
 
     for subset_size in 2..distances.len() {
@@ -70,15 +67,16 @@ fn held_karp(distances: Vec<Vec<f64>>) {
         let subsets = (1..(distances.len())).combinations(subset_size);
         for subset in subsets {
             for node in subset.iter() {
-                let current_subset:BTreeSet<usize> = subset.iter().map(|i| *i).collect();
-                let mut prev_subset:BTreeSet<usize> = current_subset.clone();
-                prev_subset.remove(node);
+                let current_subset = subset.iter().fold(0, |a, i| a | 1 << (i - 1));
+                let prev_subset = current_subset ^ (1 << (node - 1));
 
                 let mut candidate_solutions = vec![];
-                for prev_node in prev_subset.iter() {
-                    let prev_distance = C.get(&(prev_subset.to_owned(), *prev_node)).unwrap().0;
-                    let new_distance = prev_distance + distances.get(*prev_node).and_then(|i| i.get(*node)).unwrap();
-                    candidate_solutions.push((new_distance, *prev_node));
+                for prev_node in subset.iter() {
+                    if prev_node != node {
+                        let prev_distance = C.get(&(prev_subset, *prev_node)).unwrap().0;
+                        let new_distance = prev_distance + distances.get(*prev_node).and_then(|i| i.get(*node)).unwrap();
+                        candidate_solutions.push((new_distance, *prev_node));
+                    }
                 }
 
                 candidate_solutions.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
@@ -89,7 +87,7 @@ fn held_karp(distances: Vec<Vec<f64>>) {
 
     // find lowest distance that visits all nodes and then returns to starting position
     let mut tour_distances:Vec<f64> = C.iter()
-     .filter(|((visited, _enter_node), (_dist, _prev_node))| visited.len() == distances.len() - 1)
+     .filter(|((visited, _enter_node), (_dist, _prev_node))| *visited == (1 << distances.len() - 1) - 1)
      .map(|((_visited, enter_node), (dist, _prev_node))| dist + distances[0][*enter_node])
      .collect();
 

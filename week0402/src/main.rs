@@ -6,6 +6,7 @@ extern crate test;
 extern crate clap;
 use clap::{Arg, App};
 use std::collections::HashMap;
+use core::hash::{Hasher, BuildHasherDefault};
 
 use itertools::Itertools;
 
@@ -57,44 +58,75 @@ fn held_karp(distances: Vec<Vec<f64>>) {
     //     - the node previous to the one we ended here
 
     #![allow(non_snake_case)]
-    let mut C:HashMap<(u128, usize), (f64, usize)> = HashMap::with_capacity(distances.len());
-    for i in 1..distances.len() {
-        C.insert((1 << (i - 1), i), (distances[0][i], 0));
+    let distance_len = distances.len();
+    let mut C:HashMap<u64,Vec<f64>,BuildIdentityHasher> = HashMap::with_capacity_and_hasher(
+        distance_len, 
+        BuildHasherDefault::<IdentityHasher>::default());
+
+    for i in 1..distance_len {
+        C.entry(1 << (i - 1)).or_insert_with(|| vec![std::f64::MAX; distances.len()])[i] = distances[0][i];
     }
 
-    for subset_size in 2..distances.len() {
-        println!("Subset size {}/{}", subset_size, distances.len());
-        let subsets = (1..(distances.len())).combinations(subset_size);
+    for subset_size in 2..distance_len {
+        println!("Subset size {}/{}", subset_size, distance_len);
+        let subsets = (1..(distance_len)).combinations(subset_size);
         for subset in subsets {
-            for node in subset.iter() {
-                let current_subset = subset.iter().fold(0, |a, i| a | 1 << (i - 1));
-                let prev_subset = current_subset ^ (1 << (node - 1));
+            let mut current_subset = 0;
+            for i in &subset {
+                current_subset |= 1 << (i - 1);
+            }
+            let mut entries = vec![std::f64::MAX; distance_len];
+            for node in &subset {
+                let nod = *node;
+                let prev_subset = current_subset ^ (1 << (nod - 1));
 
-                let mut candidate_solutions = vec![];
-                for prev_node in subset.iter() {
-                    if prev_node != node {
-                        let prev_distance = C.get(&(prev_subset, *prev_node)).unwrap().0;
-                        let new_distance = prev_distance + distances.get(*prev_node).and_then(|i| i.get(*node)).unwrap();
-                        candidate_solutions.push((new_distance, *prev_node));
+                let mut candidate_solution = std::f64::MAX;
+                let mut prev_node = 0;
+
+                for n in &C[&prev_subset] {
+                    let prev_distance = n;
+                    let new_distance = prev_distance + distances[prev_node][nod];
+                    if new_distance < candidate_solution {
+                        candidate_solution = new_distance;
                     }
+                    prev_node += 1;
                 }
 
-                candidate_solutions.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-                C.insert((current_subset, *node), *candidate_solutions.get(0).unwrap());
+                entries[nod] = candidate_solution;
             }
+            C.insert(current_subset, entries);
         }
     }
 
     // find lowest distance that visits all nodes and then returns to starting position
     let mut tour_distances:Vec<f64> = C.iter()
-     .filter(|((visited, _enter_node), (_dist, _prev_node))| *visited == (1 << distances.len() - 1) - 1)
-     .map(|((_visited, enter_node), (dist, _prev_node))| dist + distances[0][*enter_node])
+     .filter(|(visited, _)| **visited == ((1 << distances.len() - 1) - 1) as u64)
+     .flat_map(|(_, entries)| entries.iter().enumerate().map(|(i, entry)| entry + distances[0][i]))
      .collect();
 
     tour_distances.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
 
     println!("{:?}", tour_distances.get(0));
 }
+
+#[derive(Debug, Clone, Copy, Default)]
+struct IdentityHasher(u64);
+
+impl Hasher for IdentityHasher {
+    fn finish(&self) -> u64 {
+        self.0 as u64
+    }
+
+    fn write(&mut self, _bytes: &[u8]) {
+        unimplemented!("IdentityHasher only supports u64 keys")
+    }
+
+    fn write_u64(&mut self, i: u64) {
+        self.0 = i;
+    }
+}
+
+type BuildIdentityHasher = BuildHasherDefault<IdentityHasher>;
 
 #[cfg(test)]
 mod tests {
